@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin id="cordova-plugin-background-service" version="1.2.2"
+    xmlns="http://www.phonegap.com/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <name>cordova-plugin-background-service</name>
+    <description>Cordova Background Service Plugin</description>
+
+    <license>Apache License Version 2.0</license>
+    <keywords>cordova, phonegap, background service</keywords>
+
+    <engines>
+        <engine name="cordova" version=">=3.4.0" />
+    </engines>
+
+    <js-module src="www/BackgroundService.js" name="BackgroundService">
+        <clobbers target="window.BackgroundService" />
+    </js-module>
+
+    <platform name="android">
+
+        <config-file target="AndroidManifest.xml" parent="/manifest">
+            <uses-permission android:name="android.permission.WAKE_LOCK" />
+        </config-file>
+
+        <config-file target="AndroidManifest.xml" parent="/manifest/application">
+            <service android:name="com.anrip.cordova.ForegroundService" />
+        </config-file>
+
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="BackgroundMode">
+                <param name="android-package" value="com.anrip.cordova.BackgroundMode"/>
+            </feature>
+        </config-file>
+
+        <config-file target="res/xml/config.xml" parent="/*">
+            <preference name="KeepRunning" value="true" />
+            <preference name="AndroidLaunchMode" value="singleInstance"/>
+        </config-file>
+
+        <source-file src="src/android/BackgroundMode.java" target-dir="src/com/anrip/cordova" />
+        <source-file src="src/android/ForegroundService.java" target-dir="src/com/anrip/cordova" />
+
+    </platform>
+
+    <platform name="ios">
+
+        <config-file target="*-Info.plist" parent="UIBackgroundModes">
+            <array>
+                <string>fetch</string>
+            </array>
+        </config-file>
+
+        <config-file target="config.xml" parent="/*">
+            <feature name="BackgroundFetch">
+                <param name="ios-package" value="CDVBackgroundFetch" />
+                <param name="onload" value="true" />
+            </feature>
+        </config-file>
+
+        <framework src="src/ios/TSBackgroundFetch.framework" custom="true" />
+
+        <header-file src="src/ios/CDVBackgroundFetch.h" />
+        <source-file src="src/ios/CDVBackgroundFetch.m" />
+
+    </platform>
+
+</plugin>
