@@ -16,11 +16,6 @@ import static android.content.Context.BIND_AUTO_CREATE;
 
 public class BackgroundMode extends CordovaPlugin {
 
-    // Event types for callbacks
-    private enum Event {
-        ACTIVATE, DEACTIVATE, FAILURE
-    }
-
     // Plugin namespace
     private static final String JS_NAMESPACE = "window.BackgroundService";
 
@@ -47,7 +42,7 @@ public class BackgroundMode extends CordovaPlugin {
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            fireEvent(Event.FAILURE, "'service disconnected'");
+            fireEvent("failure", "service disconnected");
         }
     };
 
@@ -122,8 +117,9 @@ public class BackgroundMode extends CordovaPlugin {
      * state.
      */
     private void startService() {
-        if (isDisabled || isBind)
+        if (isDisabled || isBind) {
             return;
+        }
 
         Activity context = cordova.getActivity();
         Intent intent = new Intent(context, ForegroundService.class);
@@ -131,8 +127,9 @@ public class BackgroundMode extends CordovaPlugin {
         try {
             context.bindService(intent, connection, BIND_AUTO_CREATE);
             context.startService(intent);
+            fireEvent("activate", "");
         } catch (Exception e) {
-            fireEvent(Event.FAILURE, String.format("'%s'", e.getMessage()));
+            fireEvent("failure", String.format("%s", e.getMessage()));
         }
 
         isBind = true;
@@ -142,46 +139,34 @@ public class BackgroundMode extends CordovaPlugin {
      * Bind the activity to a background service and put them into foreground state.
      */
     private void stopService() {
-        if (!isBind)
+        if (!isBind) {
             return;
+        }
 
         Activity context = cordova.getActivity();
         Intent intent = new Intent(context, ForegroundService.class);
 
-        fireEvent(Event.DEACTIVATE, null);
         context.unbindService(connection);
         context.stopService(intent);
+        fireEvent("deactivate", "");
 
         isBind = false;
     }
 
     /**
-     * Fire vent with some parameters inside the web view.
+     * Fire event with some parameters inside the web view.
      *
      * @param event The name of the event
-     * @param params Optional arguments for the event
+     * @param message Optional message for the event
      */
-    private void fireEvent(Event event, String params) {
-        String status, js;
+    private void fireEvent(String event, String message) {
 
-        switch (event) {
-        case ACTIVATE:
-            status = "activate";
-            break;
-        case DEACTIVATE:
-            status = "deactivate";
-            break;
-        case FAILURE:
-            status = "failure";
-            break;
-        }
-
-        js = String.format("%s.fire('%s',%s);", JS_NAMESPACE, status, params);
+        final String script = String.format("%s.fire('%s','%s');", JS_NAMESPACE, event, message);
 
         cordova.getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                webView.loadUrl("javascript:" + js);
+                webView.loadUrl("javascript:" + script);
             }
         });
     }
