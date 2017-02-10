@@ -1,19 +1,10 @@
 package com.anrip.cordova;
 
-import android.annotation.TargetApi;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
-import android.content.res.Resources;
 import android.os.Binder;
-import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
-
-import org.json.JSONObject;
 
 import static android.os.PowerManager.PARTIAL_WAKE_LOCK;
 
@@ -23,18 +14,6 @@ import static android.os.PowerManager.PARTIAL_WAKE_LOCK;
  * when low on memory.
  */
 public class ForegroundService extends Service {
-
-    // Fixed ID for the 'foreground' notification
-    public static final int NOTIFICATION_ID = -574543954;
-
-    // Default title of the background notification
-    private static final String NOTIFICATION_TITLE = "App is running in background";
-
-    // Default text of the background notification
-    private static final String NOTIFICATION_TEXT = "Doing heavy tasks.";
-
-    // Default icon of the background notification
-    private static final String NOTIFICATION_ICON = "icon";
 
     // Binder given to clients
     private final IBinder mBinder = new ForegroundBinder();
@@ -46,8 +25,27 @@ public class ForegroundService extends Service {
      * Allow clients to call on to the service.
      */
     @Override
-    public IBinder onBind (Intent intent) {
+    public IBinder onBind(Intent intent) {
         return mBinder;
+    }
+
+    /**
+     * Put the service in a foreground state to prevent app from being killed
+     * by the OS.
+     */
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        keepAwake();
+    }
+
+    /**
+     * No need to run headless on destroy.
+     */
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        sleepWell();
     }
 
     /**
@@ -66,34 +64,8 @@ public class ForegroundService extends Service {
      * Put the service in a foreground state to prevent app from being killed
      * by the OS.
      */
-    @Override
-    public void onCreate () {
-        super.onCreate();
-        keepAwake();
-    }
-
-    /**
-     * No need to run headless on destroy.
-     */
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        sleepWell();
-    }
-
-    /**
-     * Put the service in a foreground state to prevent app from being killed
-     * by the OS.
-     */
     private void keepAwake() {
-        JSONObject settings = BackgroundMode.getSettings();
-        boolean isSilent    = settings.optBoolean("silent", true);
-
-        if (!isSilent) {
-            startForeground(NOTIFICATION_ID, makeNotification());
-        }
-
-        PowerManager powerMgr = (PowerManager)getSystemService(POWER_SERVICE);
+        PowerManager powerMgr = (PowerManager) getSystemService(POWER_SERVICE);
 
         wakeLock = powerMgr.newWakeLock(PARTIAL_WAKE_LOCK, "BackgroundMode");
 
@@ -104,142 +76,10 @@ public class ForegroundService extends Service {
      * Stop background mode.
      */
     private void sleepWell() {
-        stopForeground(true);
-        getNotificationManager().cancel(NOTIFICATION_ID);
-
         if (wakeLock != null) {
             wakeLock.release();
             wakeLock = null;
         }
-    }
-
-    /**
-     * Create a notification as the visible part to be able to put the service
-     * in a foreground state by using the default settings.
-     */
-    private Notification makeNotification() {
-        return makeNotification(BackgroundMode.getSettings());
-    }
-
-    /**
-     * Create a notification as the visible part to be able to put the service
-     * in a foreground state.
-     *
-     * @param settings The config settings
-     */
-    private Notification makeNotification(JSONObject settings) {
-        String title    = settings.optString("title", NOTIFICATION_TITLE);
-        String text     = settings.optString("text", NOTIFICATION_TEXT);
-        boolean bigText = settings.optBoolean("bigText", false);
-
-        Context context = getApplicationContext();
-        String pkgName  = context.getPackageName();
-        Intent intent   = context.getPackageManager().getLaunchIntentForPackage(pkgName);
-
-        Notification.Builder notification = new Notification.Builder(context)
-            .setContentTitle(title).setContentText(text).setOngoing(true)
-            .setSmallIcon(getIconResId(settings));
-
-        if (settings.optBoolean("hidden", true)) {
-            notification.setPriority(Notification.PRIORITY_MIN);
-        }
-
-        if (bigText || text.contains("\n")) {
-            notification.setStyle(new Notification.BigTextStyle().bigText(text));
-        }
-
-        setColor(notification, settings);
-
-        if (intent != null && settings.optBoolean("resume")) {
-            PendingIntent contentIntent = PendingIntent.getActivity(context, NOTIFICATION_ID, intent,  PendingIntent.FLAG_UPDATE_CURRENT);
-            notification.setContentIntent(contentIntent);
-        }
-
-        return notification.build();
-    }
-
-    /**
-     * Update the notification.
-     *
-     * @param settings The config settings
-     */
-    protected void updateNotification (JSONObject settings) {
-        boolean isSilent = settings.optBoolean("silent", true);
-
-        if (isSilent) {
-            stopForeground(true);
-            return;
-        }
-
-        Notification notification = makeNotification(settings);
-        getNotificationManager().notify(NOTIFICATION_ID, notification);
-    }
-
-    /**
-     * Retrieves the resource ID of the app icon.
-     *
-     * @param settings A JSON dict containing the icon name.
-     */
-    private int getIconResId(JSONObject settings) {
-        String icon = settings.optString("icon", NOTIFICATION_ICON);
-
-        // cordova-android 6 uses mipmaps
-        int resId = getIconResId(icon, "mipmap");
-
-        if (resId == 0) {
-            resId = getIconResId(icon, "drawable");
-        }
-
-        return resId;
-    }
-
-    /**
-     * Retrieve resource id of the specified icon.
-     *
-     * @param icon The name of the icon.
-     * @param type The resource type where to look for.
-     *
-     * @return The resource id or 0 if not found.
-     */
-    private int getIconResId(String icon, String type) {
-        Resources res  = getResources();
-        String pkgName = getPackageName();
-
-        int resId = res.getIdentifier(icon, type, pkgName);
-
-        if (resId == 0) {
-            resId = res.getIdentifier("icon", type, pkgName);
-        }
-
-        return resId;
-    }
-
-    /**
-     * Set notification color if its supported by the SDK.
-     *
-     * @param notification A Notification.Builder instance
-     * @param settings A JSON dict containing the color definition (red: FF0000)
-     */
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private void setColor(Notification.Builder notification, JSONObject settings) {
-        String hex = settings.optString("color", null);
-
-        if (Build.VERSION.SDK_INT < 21 || hex == null)
-            return;
-
-        try {
-            int aRGB = Integer.parseInt(hex, 16) + 0xFF000000;
-            notification.setColor(aRGB);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Shared manager for the notification service.
-     */
-    private NotificationManager getNotificationManager() {
-        return (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
     }
 
 }

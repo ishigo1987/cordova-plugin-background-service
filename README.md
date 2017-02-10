@@ -12,22 +12,14 @@ $ cordova plugin add cordova-plugin-background-service
 The plugin creates the object `window.BackgroundService` with the methods `start(success, failure, config)`, and `stop(success, failure)`.
 
 ```Javascript
-var bgs = window.BackgroundService;
-bgs.start(
-    function(fn) { dosometing(), fn && fn(); },
-    function() { console.log('err'); },
-    {
-        // Android Only
-        title: 'App is running in background',
-        text: 'Doing heavy tasks.',
-        bigText: false,
-        resume: true,
-        silent: true,
-        hidden: true,
-        color: null,
-        icon: 'icon',
-        // iOS Only
-        stopOnTerminate: false // Set true to cease background-fetch from operating after user "closes" the app (Default: true)
-    }
-);
+window.BackgroundService.start(
+    function(fn) { dosometing(), fn && fn() },
+    function() { console.log('err') }
+)
 ```
+
+## Code Refs ##
+
+https://github.com/katzer/cordova-plugin-background-mode
+
+https://github.com/transistorsoft/cordova-plugin-background-fetch

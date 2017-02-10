@@ -8,7 +8,6 @@ import android.os.IBinder;
 
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -33,9 +32,6 @@ public class BackgroundMode extends CordovaPlugin {
 
     // Flag indicates if the service is bind
     private boolean isBind = false;
-
-    // Default settings for the notification
-    private static JSONObject defaultSettings = new JSONObject();
 
     // Service that keeps the app awake
     private ForegroundService service;
@@ -67,13 +63,7 @@ public class BackgroundMode extends CordovaPlugin {
      * @throws JSONException
      */
     @Override
-    public boolean execute (String action, JSONArray args, CallbackContext callback) throws JSONException {
-
-        if (action.equalsIgnoreCase("configure")) {
-            configure(args.getJSONObject(0), args.getBoolean(1));
-            callback.success();
-            return true;
-        }
+    public boolean execute(String action, JSONArray args, CallbackContext callback) throws JSONException {
 
         if (action.equalsIgnoreCase("disable")) {
             isDisabled = true;
@@ -128,31 +118,6 @@ public class BackgroundMode extends CordovaPlugin {
     }
 
     /**
-     * Update the default settings and configure the notification.
-     *
-     * @param settings The settings
-     * @param update A truthy value means to update the running service.
-     */
-    private void configure(JSONObject settings, boolean update) {
-        if (update) {
-            if (isBind) {
-                service.updateNotification(settings);
-            }
-        } else {
-            defaultSettings = settings;
-        }
-    }
-
-    /**
-     * The settings for the new/updated notification.
-     *
-     * @return updateSettings if set or default settings
-     */
-    protected static JSONObject getSettings() {
-        return defaultSettings;
-    }
-
-    /**
      * Bind the activity to a background service and put them into foreground
      * state.
      */
@@ -161,11 +126,10 @@ public class BackgroundMode extends CordovaPlugin {
             return;
 
         Activity context = cordova.getActivity();
-        Intent intent    = new Intent(context, ForegroundService.class);
+        Intent intent = new Intent(context, ForegroundService.class);
 
         try {
             context.bindService(intent, connection, BIND_AUTO_CREATE);
-            fireEvent(Event.ACTIVATE, null);
             context.startService(intent);
         } catch (Exception e) {
             fireEvent(Event.FAILURE, String.format("'%s'", e.getMessage()));
@@ -182,7 +146,7 @@ public class BackgroundMode extends CordovaPlugin {
             return;
 
         Activity context = cordova.getActivity();
-        Intent intent    = new Intent(context, ForegroundService.class);
+        Intent intent = new Intent(context, ForegroundService.class);
 
         fireEvent(Event.DEACTIVATE, null);
         context.unbindService(connection);
@@ -197,16 +161,19 @@ public class BackgroundMode extends CordovaPlugin {
      * @param event The name of the event
      * @param params Optional arguments for the event
      */
-    private void fireEvent (Event event, String params) {
+    private void fireEvent(Event event, String params) {
         String status, js;
 
         switch (event) {
-            case ACTIVATE:
-                status = "activate"; break;
-            case DEACTIVATE:
-                status = "deactivate"; break;
-            case FAILURE:
-                status = "failure"; break;
+        case ACTIVATE:
+            status = "activate";
+            break;
+        case DEACTIVATE:
+            status = "deactivate";
+            break;
+        case FAILURE:
+            status = "failure";
+            break;
         }
 
         js = String.format("%s.fire('%s',%s);", JS_NAMESPACE, status, params);
