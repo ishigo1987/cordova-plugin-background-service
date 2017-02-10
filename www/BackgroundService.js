@@ -3,6 +3,7 @@ var exec = require('cordova/exec');
 var noop = function () { }, timer = null;
 
 var androidMode = {
+    actived: false,
     enabled: false,
     start: function (success, failure) {
         success = success || noop;
@@ -21,7 +22,6 @@ var androidMode = {
         timer && clearInterval(timer);
         exec(success, failure, 'BackgroundMode', 'disable', []);
     },
-    actived: false,
     fire: function (status, params) {
         console.log('BackgroundMode:', status, params);
         androidMode.actived = status == 'activate';
@@ -29,19 +29,23 @@ var androidMode = {
 };
 
 var iosMode = {
+    actived: false,
     enabled: false,
     start: function (success, failure) {
         iosMode.enabled = true;
         success = success || noop;
         failure = failure || noop;
         var callback = function () {
+            iosMode.actived = true;
             success(function () {
+                iosMode.actived = false;
                 exec(null, null, 'BackgroundFetch', 'finish', []);
             });
         };
         exec(callback, failure, 'BackgroundFetch', 'configure', [{ stopOnTerminate: false }]);
     },
     stop: function (success, failure) {
+        iosMode.actived = false;
         iosMode.enabled = false;
         success = success || noop;
         failure = failure || noop;
