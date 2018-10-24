@@ -32,7 +32,7 @@
                 <param name="android-package" value="com.anrip.cordova.BackgroundMode"/>
             </feature>
             <preference name="KeepRunning" value="true" />
-            <preference name="AndroidLaunchMode" value="standard"/>
+            <preference name="AndroidLaunchMode" value="singleInstance"/>
         </config-file>
 
         <source-file src="src/android/BackgroundMode.java" target-dir="src/com/anrip/cordova" />
